@@ -13,7 +13,7 @@ export const PLANS = {
   pro: {
     name: "Pro",
     description: "For professionals who need more",
-    price: "$20/mo",
+    price: "$50/mo",
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID ?? "",
     features: [
       "Unlimited projects",
@@ -25,7 +25,7 @@ export const PLANS = {
   team: {
     name: "Team",
     description: "For teams that need to collaborate",
-    price: "$50/mo",
+    price: "$100/mo",
     priceId: process.env.NEXT_PUBLIC_STRIPE_TEAM_PRICE_ID ?? "",
     features: [
       "Everything in Pro",

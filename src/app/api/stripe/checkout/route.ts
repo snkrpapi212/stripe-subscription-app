@@ -18,9 +18,9 @@ export async function POST(request: NextRequest) {
     const { priceId } = checkoutSchema.parse(body);
 
     // Find or create Stripe customer
-    const customers = await stripe.customers.list({
-      limit: 1,
+    const customers = await stripe.customers.search({
       query: `metadata["clerkUserId"]:"${userId}"`,
+      limit: 1,
     });
 
     let customerId: string;
