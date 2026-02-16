@@ -1,4 +1,4 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 
 export const getSubscription = query({
@@ -43,9 +43,8 @@ export const ensureSubscriptionRecord = mutation({
   },
 });
 
-export const upsertSubscription = mutation({
+export const upsertSubscription = internalMutation({
   args: {
-    webhookSecret: v.string(),
     clerkUserId: v.string(),
     stripeCustomerId: v.string(),
     stripeSubscriptionId: v.string(),
@@ -63,41 +62,29 @@ export const upsertSubscription = mutation({
     cancelAtPeriodEnd: v.boolean(),
   },
   handler: async (ctx, args) => {
-    const secret = process.env.CONVEX_WEBHOOK_SECRET;
-    if (!secret || args.webhookSecret !== secret) {
-      throw new Error("Unauthorized");
-    }
-
-    const { webhookSecret: _, ...data } = args;
     const existing = await ctx.db
       .query("subscriptions")
-      .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", data.clerkUserId))
+      .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", args.clerkUserId))
       .unique();
 
-    const record = {
-      ...data,
+    const data = {
+      ...args,
       updatedAt: Date.now(),
     };
 
     if (existing) {
-      await ctx.db.patch(existing._id, record);
+      await ctx.db.patch(existing._id, data);
     } else {
-      await ctx.db.insert("subscriptions", record);
+      await ctx.db.insert("subscriptions", data);
     }
   },
 });
 
-export const deleteSubscription = mutation({
+export const deleteSubscription = internalMutation({
   args: {
-    webhookSecret: v.string(),
     stripeSubscriptionId: v.string(),
   },
   handler: async (ctx, args) => {
-    const secret = process.env.CONVEX_WEBHOOK_SECRET;
-    if (!secret || args.webhookSecret !== secret) {
-      throw new Error("Unauthorized");
-    }
-
     const existing = await ctx.db
       .query("subscriptions")
       .withIndex("by_stripeSubscriptionId", (q) =>
