@@ -10,7 +10,7 @@ export function subscriptionToPayload(subscription: Stripe.Subscription) {
     stripePriceId: priceId,
     plan: getPlanFromPriceId(priceId),
     status: mapStripeStatus(subscription.status),
-    currentPeriodEnd: subscription.current_period_end * 1000,
+    currentPeriodEnd: (subscription.current_period_end ?? 0) * 1000,
     cancelAtPeriodEnd: subscription.cancel_at_period_end,
   };
 }
