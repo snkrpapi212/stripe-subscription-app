@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import type Stripe from "stripe";
 import { subscriptionToPayload } from "@/lib/stripe-helpers";
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "../../../../convex/_generated/api";
+
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
@@ -23,6 +27,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
+  const webhookSecret = process.env.CONVEX_WEBHOOK_SECRET!;
+
   try {
     switch (event.type) {
       case "checkout.session.completed": {
@@ -31,20 +37,27 @@ export async function POST(request: NextRequest) {
           const subscription = await stripe.subscriptions.retrieve(
             session.subscription as string,
           );
-          await relayToConvex("upsert", subscriptionToPayload(subscription));
+          await convex.mutation(api.subscriptions.upsertSubscription, {
+            webhookSecret,
+            ...subscriptionToPayload(subscription),
+          });
         }
         break;
       }
 
       case "customer.subscription.updated": {
         const subscription = event.data.object as Stripe.Subscription;
-        await relayToConvex("upsert", subscriptionToPayload(subscription));
+        await convex.mutation(api.subscriptions.upsertSubscription, {
+          webhookSecret,
+          ...subscriptionToPayload(subscription),
+        });
         break;
       }
 
       case "customer.subscription.deleted": {
         const subscription = event.data.object as Stripe.Subscription;
-        await relayToConvex("delete", {
+        await convex.mutation(api.subscriptions.deleteSubscription, {
+          webhookSecret,
           stripeSubscriptionId: subscription.id,
         });
         break;
@@ -56,7 +69,10 @@ export async function POST(request: NextRequest) {
           const subscription = await stripe.subscriptions.retrieve(
             invoice.subscription as string,
           );
-          await relayToConvex("upsert", subscriptionToPayload(subscription));
+          await convex.mutation(api.subscriptions.upsertSubscription, {
+            webhookSecret,
+            ...subscriptionToPayload(subscription),
+          });
         }
         break;
       }
@@ -66,32 +82,5 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Webhook handler error:", error);
     return NextResponse.json({ error: "Webhook handler failed" }, { status: 500 });
-  }
-}
-
-async function relayToConvex(type: string, data: Record<string, unknown>) {
-  const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
-  const secret = process.env.CONVEX_WEBHOOK_SECRET;
-
-  if (!convexUrl || !secret) {
-    throw new Error("Missing CONVEX_URL or CONVEX_WEBHOOK_SECRET");
-  }
-
-  // In production, Convex HTTP actions use .site instead of .cloud
-  // For local dev (127.0.0.1), the URL stays as-is
-  const httpUrl = convexUrl.includes(".cloud")
-    ? convexUrl.replace(".cloud", ".site")
-    : convexUrl;
-  const response = await fetch(`${httpUrl}/stripe-webhook`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${secret}`,
-    },
-    body: JSON.stringify({ type, data }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Convex relay failed: ${response.status} ${await response.text()}`);
   }
 }
