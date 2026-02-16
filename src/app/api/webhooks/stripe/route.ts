@@ -78,13 +78,14 @@ async function relayToConvex(type: string, data: Record<string, unknown>) {
   }
 
   // In production, Convex HTTP actions use .site instead of .cloud
-  // For local dev (127.0.0.1), use the CONVEX_SITE_URL env var or same URL
+  // For local dev, HTTP actions are at /http/ path prefix on the same URL
+  const isLocal = !convexUrl.includes(".cloud");
   const httpUrl = process.env.CONVEX_SITE_URL
-    ?? (convexUrl.includes(".cloud")
-      ? convexUrl.replace(".cloud", ".site")
-      : convexUrl);
+    ?? (isLocal ? convexUrl : convexUrl.replace(".cloud", ".site"));
 
-  const targetUrl = `${httpUrl}/stripe-webhook`;
+  const targetUrl = isLocal
+    ? `${httpUrl}/http/stripe-webhook`
+    : `${httpUrl}/stripe-webhook`;
   console.log(`Relaying webhook to: ${targetUrl}`);
 
   const response = await fetch(targetUrl, {
