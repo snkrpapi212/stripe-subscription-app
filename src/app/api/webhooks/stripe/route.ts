@@ -77,8 +77,11 @@ async function relayToConvex(type: string, data: Record<string, unknown>) {
     throw new Error("Missing CONVEX_URL or CONVEX_WEBHOOK_SECRET");
   }
 
-  // Convex HTTP actions are at the same domain as the deployment URL
-  const httpUrl = convexUrl.replace(".cloud", ".site");
+  // In production, Convex HTTP actions use .site instead of .cloud
+  // For local dev (127.0.0.1), the URL stays as-is
+  const httpUrl = convexUrl.includes(".cloud")
+    ? convexUrl.replace(".cloud", ".site")
+    : convexUrl;
   const response = await fetch(`${httpUrl}/stripe-webhook`, {
     method: "POST",
     headers: {
