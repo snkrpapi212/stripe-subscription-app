@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
-import { getPlanFromPriceId } from "@/lib/plans";
 import type Stripe from "stripe";
+import { subscriptionToPayload } from "@/lib/stripe-helpers";
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
@@ -67,36 +67,6 @@ export async function POST(request: NextRequest) {
     console.error("Webhook handler error:", error);
     return NextResponse.json({ error: "Webhook handler failed" }, { status: 500 });
   }
-}
-
-function subscriptionToPayload(subscription: Stripe.Subscription) {
-  const priceId = subscription.items.data[0]?.price.id ?? "";
-  return {
-    clerkUserId: subscription.metadata.clerkUserId,
-    stripeCustomerId: subscription.customer as string,
-    stripeSubscriptionId: subscription.id,
-    stripePriceId: priceId,
-    plan: getPlanFromPriceId(priceId),
-    status: mapStripeStatus(subscription.status),
-    currentPeriodEnd: subscription.current_period_end * 1000,
-    cancelAtPeriodEnd: subscription.cancel_at_period_end,
-  };
-}
-
-function mapStripeStatus(
-  status: Stripe.Subscription.Status,
-): "active" | "canceled" | "past_due" | "incomplete" | "trialing" | "unpaid" {
-  const mapped: Record<string, "active" | "canceled" | "past_due" | "incomplete" | "trialing" | "unpaid"> = {
-    active: "active",
-    canceled: "canceled",
-    past_due: "past_due",
-    incomplete: "incomplete",
-    incomplete_expired: "incomplete",
-    trialing: "trialing",
-    unpaid: "unpaid",
-    paused: "canceled",
-  };
-  return mapped[status] ?? "active";
 }
 
 async function relayToConvex(type: string, data: Record<string, unknown>) {

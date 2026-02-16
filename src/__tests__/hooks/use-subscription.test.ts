@@ -1,0 +1,83 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { renderHook } from "@testing-library/react";
+
+// Mock convex/react
+vi.mock("convex/react", () => ({
+  useQuery: vi.fn(),
+}));
+
+import { useQuery } from "convex/react";
+import { useSubscription } from "@/hooks/use-subscription";
+
+const mockUseQuery = vi.mocked(useQuery);
+
+describe("useSubscription", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns loading state when query is undefined", () => {
+    mockUseQuery.mockReturnValue(undefined);
+    const { result } = renderHook(() => useSubscription());
+
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.plan).toBe("free");
+  });
+
+  it("defaults to free plan when subscription is null", () => {
+    mockUseQuery.mockReturnValue(null);
+    const { result } = renderHook(() => useSubscription());
+
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.plan).toBe("free");
+    expect(result.current.isFree).toBe(true);
+    expect(result.current.isPro).toBe(false);
+    expect(result.current.isTeam).toBe(false);
+    expect(result.current.status).toBe("active");
+    expect(result.current.cancelAtPeriodEnd).toBe(false);
+  });
+
+  it("returns correct state for pro subscription", () => {
+    mockUseQuery.mockReturnValue({
+      plan: "pro",
+      status: "active",
+      cancelAtPeriodEnd: false,
+      currentPeriodEnd: 1700000000000,
+    });
+    const { result } = renderHook(() => useSubscription());
+
+    expect(result.current.plan).toBe("pro");
+    expect(result.current.isFree).toBe(false);
+    expect(result.current.isPro).toBe(true);
+    expect(result.current.isTeam).toBe(false);
+    expect(result.current.status).toBe("active");
+    expect(result.current.currentPeriodEnd).toBe(1700000000000);
+  });
+
+  it("returns correct state for team subscription", () => {
+    mockUseQuery.mockReturnValue({
+      plan: "team",
+      status: "active",
+      cancelAtPeriodEnd: true,
+      currentPeriodEnd: 1700000000000,
+    });
+    const { result } = renderHook(() => useSubscription());
+
+    expect(result.current.plan).toBe("team");
+    expect(result.current.isFree).toBe(false);
+    expect(result.current.isPro).toBe(true); // team is at least pro
+    expect(result.current.isTeam).toBe(true);
+    expect(result.current.cancelAtPeriodEnd).toBe(true);
+  });
+
+  it("handles past_due status", () => {
+    mockUseQuery.mockReturnValue({
+      plan: "pro",
+      status: "past_due",
+      cancelAtPeriodEnd: false,
+    });
+    const { result } = renderHook(() => useSubscription());
+
+    expect(result.current.status).toBe("past_due");
+  });
+});
