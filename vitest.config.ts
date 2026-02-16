@@ -8,8 +8,12 @@ export default defineConfig({
     setupFiles: ["./src/__tests__/setup.ts"],
   },
   resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
+    alias: [
+      { find: "@", replacement: path.resolve(__dirname, "./src") },
+      {
+        find: /.*\/convex\/_generated\/api/,
+        replacement: path.resolve(__dirname, "./src/__tests__/__mocks__/convex-api.ts"),
+      },
+    ],
   },
 });
