@@ -9,9 +9,9 @@ export async function POST() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const customers = await stripe.customers.list({
-      limit: 1,
+    const customers = await stripe.customers.search({
       query: `metadata["clerkUserId"]:"${userId}"`,
+      limit: 1,
     });
 
     if (customers.data.length === 0) {
