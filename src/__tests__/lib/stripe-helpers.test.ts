@@ -31,8 +31,8 @@ describe("mapStripeStatus", () => {
     expect(mapStripeStatus("unpaid")).toBe("unpaid");
   });
 
-  it("maps 'paused' to 'canceled'", () => {
-    expect(mapStripeStatus("paused")).toBe("canceled");
+  it("maps 'paused' to 'active' (paused ≠ canceled — access should be retained)", () => {
+    expect(mapStripeStatus("paused")).toBe("active");
   });
 });
 

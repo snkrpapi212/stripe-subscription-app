@@ -15,7 +15,11 @@ interface FeatureGateProps {
 export function FeatureGate({ minimum, children, fallback }: FeatureGateProps) {
   const { plan, isLoading } = useSubscription();
 
-  if (isLoading) return null;
+  if (isLoading) {
+    return (
+      <div className="animate-pulse rounded-xl border border-gray-200 bg-gray-100 p-6 h-24" />
+    );
+  }
 
   if (isPlanAtLeast(plan, minimum)) {
     return <>{children}</>;

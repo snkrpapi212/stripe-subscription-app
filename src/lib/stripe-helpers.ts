@@ -26,7 +26,8 @@ export function mapStripeStatus(
     incomplete_expired: "incomplete",
     trialing: "trialing",
     unpaid: "unpaid",
-    paused: "canceled",
+    // paused = temporarily paused, not canceled — keep as active so access isn't revoked
+    paused: "active",
   };
   return mapped[status] ?? "active";
 }

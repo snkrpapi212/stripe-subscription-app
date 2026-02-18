@@ -74,18 +74,21 @@ async function relayToConvex(type: string, data: Record<string, unknown>) {
   const secret = process.env.CONVEX_WEBHOOK_SECRET;
 
   if (!convexUrl || !secret) {
-    throw new Error("Missing CONVEX_URL or CONVEX_WEBHOOK_SECRET");
+    throw new Error("Missing NEXT_PUBLIC_CONVEX_URL or CONVEX_WEBHOOK_SECRET");
   }
 
-  // In production, Convex HTTP actions use .site instead of .cloud
-  // For local dev, HTTP actions are at /http/ path prefix on the same URL
-  const isLocal = !convexUrl.includes(".cloud");
-  const httpUrl = process.env.CONVEX_SITE_URL
-    ?? (isLocal ? convexUrl : convexUrl.replace(".cloud", ".site"));
+  // CONVEX_SITE_URL is the HTTP actions base URL (ends in .site for cloud deployments).
+  // If not set, fall back to deriving it from NEXT_PUBLIC_CONVEX_URL:
+  //   - Local dev: same origin with /http/ prefix
+  //   - Cloud: replace .cloud with .site (no path prefix)
+  const isLocal = convexUrl.includes("localhost") || convexUrl.includes("127.0.0.1");
+  const siteUrl =
+    process.env.CONVEX_SITE_URL ??
+    (isLocal ? convexUrl : convexUrl.replace(/\.cloud(\/.*)?$/, ".site$1"));
 
   const targetUrl = isLocal
-    ? `${httpUrl}/http/stripe-webhook`
-    : `${httpUrl}/stripe-webhook`;
+    ? `${siteUrl}/http/stripe-webhook`
+    : `${siteUrl}/stripe-webhook`;
   console.log(`Relaying webhook to: ${targetUrl}`);
 
   const response = await fetch(targetUrl, {
